@@ -1,0 +1,1614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GhostRoot CTF</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        cyber: {
+                            bg: '#0b0f19',
+                            card: '#131b2e',
+                            panel: '#1a243b',
+                            border: '#23314d',
+                            accent: '#10b981',
+                            accentHover: '#059669',
+                            cyan: '#06b6d4',
+                            magenta: '#f43f5e',
+                            yellow: '#f59e0b',
+                            gold: '#fbbf24'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['Fira Code', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0b0f19;
+            color: #e2e8f0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Custom Scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0b0f19;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #23314d;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #10b981;
+        }
+
+        .glow-green {
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
+        }
+        .glow-cyan {
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.2);
+        }
+    </style>
+
+    <!-- Global functions for console inspection & XSS challenges -->
+    <script>
+        function getFlag() {
+            const flag = "FLAG{console_localstorage_dev_secret_881}";
+            console.log("CTF Flag retrieved from global console execution:", flag);
+            return flag;
+        }
+
+        function fetchFlag() {
+            return getFlag();
+        }
+
+        window.getFlag = getFlag;
+        window.fetchFlag = fetchFlag;
+        if (typeof globalThis !== 'undefined') {
+            globalThis.getFlag = getFlag;
+            globalThis.fetchFlag = fetchFlag;
+        }
+    </script>
+</head>
+<body class="min-h-screen flex flex-col bg-cyber-bg text-slate-200 antialiased overflow-x-hidden">
+
+    <header class="border-b border-cyber-border bg-cyber-card/90 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <span class="text-cyber-accent text-2xl"><i class="fa-solid fa-ghost"></i></span>
+                <h1 class="text-lg sm:text-xl font-bold tracking-wider text-white font-mono flex items-center gap-2">
+                    <span class="text-cyber-accent font-black">GHOST</span> 
+                    <span class="text-slate-300 font-normal">ROOT CTF</span>
+                </h1>
+            </div>
+
+            <div class="flex items-center space-x-3 sm:space-x-4">
+                <button onclick="confirmResetProgress()" class="px-3 py-1.5 rounded-lg bg-cyber-panel text-xs text-slate-400 hover:text-cyber-magenta border border-cyber-border transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-rotate-right"></i>
+                    <span class="hidden sm:inline">Reset Progress</span>
+                </button>
+
+                <div class="bg-cyber-panel/90 px-4 py-1.5 rounded-lg border border-cyber-accent/30 flex items-center space-x-2 glow-green">
+                    <i class="fa-solid fa-trophy text-cyber-gold text-sm"></i>
+                    <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Score:</span>
+                    <span id="userScore" class="font-mono font-bold text-cyber-accent text-base">0 PTS</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 flex flex-col md:flex-row gap-6">
+        
+        <!-- SIDEBAR: Topics Navigation -->
+        <aside class="w-full md:w-80 flex-shrink-0 flex flex-col space-y-4">
+            <div class="bg-cyber-card border border-cyber-border rounded-xl p-4 shadow-xl">
+                <div class="flex items-center justify-between pb-3 border-b border-cyber-border mb-3">
+                    <h2 class="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-2 font-mono">
+                        <i class="fa-solid fa-book-bookmark text-cyber-cyan"></i> Learning Topics (10)
+                    </h2>
+                    <span id="completionBadge" class="text-xs font-mono px-2 py-0.5 rounded-full bg-cyber-panel text-slate-400 border border-cyber-border">0 / 30 Flags</span>
+                </div>
+
+                <nav id="topicNavList" class="space-y-1.5 max-h-[600px] overflow-y-auto pr-1">
+                    <!-- Nav items populated dynamically -->
+                </nav>
+            </div>
+
+            <!-- Progress Box -->
+            <div class="bg-cyber-card border border-cyber-border rounded-xl p-4 shadow-xl text-xs space-y-2">
+                <div class="flex justify-between text-slate-400">
+                    <span>Level:</span>
+                    <span class="text-cyber-accent font-mono font-bold">Absolute Beginner</span>
+                </div>
+                <div class="flex justify-between text-slate-400">
+                    <span>Total Challenges:</span>
+                    <span class="text-slate-300 font-mono">30 MCQs + 30 CTFs</span>
+                </div>
+                <div class="w-full bg-cyber-panel rounded-full h-2 mt-2 overflow-hidden border border-cyber-border">
+                    <div id="progressBar" class="bg-cyber-accent h-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- MAIN VIEWPORT: Topic Summary, MCQs & 3 CTF Challenges (Easy, Moderate, Hard) -->
+        <section class="flex-1 bg-cyber-card border border-cyber-border rounded-xl p-5 sm:p-7 shadow-xl flex flex-col justify-between">
+            <div id="topicWorkspace" class="space-y-8">
+                <!-- Content injected dynamically -->
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Custom Modal for Confirmation -->
+    <div id="modalOverlay" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-cyber-card border border-cyber-border rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+            <h3 id="modalTitle" class="text-lg font-bold text-white flex items-center gap-2">
+                <i class="fa-solid fa-circle-exclamation text-cyber-yellow"></i> Confirm Reset
+            </h3>
+            <p id="modalMsg" class="text-xs sm:text-sm text-slate-300">Are you sure you want to reset all your progress, solved MCQs, flags, and total points back to 0?</p>
+            <div class="flex justify-end gap-3 pt-2">
+                <button onclick="closeModal()" class="px-4 py-2 rounded-lg bg-cyber-panel text-xs text-slate-300 hover:bg-slate-700 transition">Cancel</button>
+                <button onclick="executeReset()" class="px-4 py-2 rounded-lg bg-cyber-magenta text-white text-xs font-bold hover:bg-rose-600 transition">Yes, Reset Everything</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Toast Notification -->
+    <div id="toastNotification" class="fixed bottom-5 right-5 hidden z-50 px-4 py-3 rounded-xl border text-sm font-mono shadow-2xl transition-all duration-300 flex items-center gap-3">
+        <i id="toastIcon" class="text-lg"></i>
+        <span id="toastMsg"></span>
+    </div>
+
+    <!-- HIDDEN HTML COMMENT FOR TOPIC 1 EASY: FLAG{inspect_element_source_found_101} -->
+    <!-- HIDDEN ROBOTS.TXT DISALLOWED DIR FOR TOPIC 5 EASY: FLAG{robots_txt_admin_dir_leak_88} -->
+
+    <script>
+        // Store developer flag in localStorage for DevTools inspection challenge
+        try {
+            localStorage.setItem('secret_ctf_key', 'FLAG{console_localstorage_dev_secret_881}');
+        } catch(e) {}
+
+        const TOPICS_DATA = [
+            {
+                id: 'topic_web_source',
+                title: '1. Source Code & DevTools',
+                category: 'WEB BASICS',
+                summary: 'Web browsers download HTML, CSS, and JavaScript to construct web pages. Developers often leave comments or hidden elements during testing. Inspecting DOM elements or checking `localStorage` in browser Developer Tools (F12) can expose sensitive data.',
+                mcqs: [
+                    {
+                        id: 'mcq_src_1',
+                        level: 'Easy',
+                        question: 'How do standard comments start and end inside HTML markup?',
+                        options: ['// comment', '/* comment */', '<!-- comment -->', '# comment'],
+                        correct: 2,
+                        explanation: 'HTML comments use the syntax `<!-- comment -->`.'
+                    },
+                    {
+                        id: 'mcq_src_2',
+                        level: 'Moderate',
+                        question: 'Which CSS property hides an element from sight while keeping it inside the DOM?',
+                        options: ['display: none;', 'color: transparent;', 'visibility: hidden;', 'Both display:none and visibility:hidden'],
+                        correct: 3,
+                        explanation: 'Both properties visually hide the element, but the element still exists in the page HTML DOM tree.'
+                    },
+                    {
+                        id: 'mcq_src_3',
+                        level: 'Hard',
+                        question: 'Where can you view key-value data saved across browser reloads without server cookies?',
+                        options: ['Network Tab', 'LocalStorage in Application Tab', 'Console History', 'Styles Tab'],
+                        correct: 1,
+                        explanation: 'Browser LocalStorage persists key-value strings on the client side and can be viewed under Application -> LocalStorage.'
+                    }
+                ],
+                challenges: [
+                    {
+                        id: 'ctf_src_easy',
+                        level: 'Easy',
+                        pts: 50,
+                        title: 'Hidden in HTML Comment',
+                        task: 'A developer left a secret flag inside an HTML comment on this page! View the page source code (Ctrl+U or F12) to find it.',
+                        flag: 'FLAG{inspect_element_source_found_101}',
+                        hint: 'Press F12 or Right-Click -> Inspect, then search for `FLAG{` in the HTML markup.',
+                        widget: 'comment'
+                    },
+                    {
+                        id: 'ctf_src_mod',
+                        level: 'Moderate',
+                        pts: 100,
+                        title: 'Hidden DOM Form Input',
+                        task: 'Inspect the interactive form container below using DevTools to discover the hidden input field.',
+                        flag: 'FLAG{hidden_input_css_revealed_902}',
+                        hint: 'Right click the box below, select "Inspect", and look for `<input type="hidden">`.',
+                        widget: 'hidden_input'
+                    },
+                    {
+                        id: 'ctf_src_hard',
+                        level: 'Hard',
+                        pts: 150,
+                        title: 'Console & LocalStorage Key',
+                        task: 'Inspect `localStorage` in DevTools (Application tab) or call `getFlag()` directly in your browser Console!',
+                        flag: 'FLAG{console_localstorage_dev_secret_881}',
+                        hint: 'Open your browser console (F12) and type `localStorage.getItem("secret_ctf_key")` or `getFlag()`.',
+                        widget: 'console'
+                    }
+                ]
+            },
+            {
+                id: 'topic_crypto',
+                title: '2. Encoding & Cryptography',
+                category: 'CRYPTOGRAPHY',
+                summary: 'Encoding transforms data into standard formats for transmission (e.g., Base64, Hex). Encoding is **NOT** encryption; anyone can reverse it without a secret key. Ciphers like ROT13 substitute characters, while Hex converts bytes into hexadecimal representation.',
+                mcqs: [
+                    {
+                        id: 'mcq_cry_1',
+                        level: 'Easy',
+                        question: 'Is Base64 encoding considered a secure method for storing passwords?',
+                        options: ['Yes, it is strong encryption', 'No, encoding is reversible by anyone without a key', 'Yes, if salted', 'Only on HTTPS sites'],
+                        correct: 1,
+                        explanation: 'Encoding formats data, it does not hide or encrypt data securely.'
+                    },
+                    {
+                        id: 'mcq_cry_2',
+                        level: 'Moderate',
+                        question: 'How many positions does the ROT13 substitution cipher shift letters in the alphabet?',
+                        options: ['5', '10', '13', '26'],
+                        correct: 2,
+                        explanation: 'ROT13 shifts each letter by 13 positions in the Latin alphabet.'
+                    },
+                    {
+                        id: 'mcq_cry_3',
+                        level: 'Hard',
+                        question: 'What is the ASCII character represented by the hexadecimal byte `0x41`?',
+                        options: ['a', 'A', '1', '9'],
+                        correct: 1,
+                        explanation: 'Hex 0x41 corresponds to decimal 65, which is uppercase letter "A" in ASCII.'
+                    }
+                ],
+                challenges: [
+                    {
+                        id: 'ctf_cry_easy',
+                        level: 'Easy',
+                        pts: 50,
+                        title: 'Base64 String Decoding',
+                        task: 'Decode this Base64 payload: `RkxBR3tiYXNlNjRfZGVjb2RlX25vb2JfMmE3fQ==`',
+                        flag: 'FLAG{base64_decode_noob_2a7}',
+                        hint: 'Use the decoder tool below or run `atob("RkxBR3tiYXNlNjRfZGVjb2RlX25vb2JfMmE3fQ==")` in console.',
+                        widget: 'b64'
+                    },
+                    {
+                        id: 'ctf_cry_mod',
+                        level: 'Moderate',
+                        pts: 100,
+                        title: 'ROT13 Cipher Decryption',
+                        task: 'Decrypt this ROT13 cipher text: `SYNT{rot13_pvcure_f3per3g_55}`',
+                        flag: 'FLAG{rot13_cipher_s3cre3t_55}',
+                        hint: 'Shift each letter back by 13 spots (A->N, N->A).',
+                        widget: 'rot13'
+                    },
+                    {
+                        id: 'ctf_cry_hard',
+                        level: 'Hard',
+                        pts: 150,
+                        title: 'Hexadecimal to ASCII Conversion',
+                        task: 'Convert this hexadecimal payload to ASCII text: `464c41477b6865785f746f5f61736369695f6465636f64655f3939307d`',
+                        flag: 'FLAG{hex_to_ascii_decode_990}',
+                        hint: 'Every pair of hex digits (e.g. 46="F", 4c="L") forms one ASCII character.',
+                        widget: 'hex'
+                    }
+                ]
+            },
+            {
+                id: 'topic_sqli',
+                title: '3. SQL Injection (SQLi)',
+                category: 'DATABASE SECURITY',
+                summary: 'SQL Injection occurs when untrusted user input is directly concatenated into database SQL queries. Attackers break out of query logic using quotes (`\x27`) and operators (`OR 1=1`) to bypass logins or dump entire databases.',
+                mcqs: [
+                    {
+                        id: 'mcq_sql_1',
+                        level: 'Easy',
+                        question: 'What primary character is used in SQL to start or terminate string literals?',
+                        options: ['Double Quote (")', 'Single Quote (\x27)', 'Semicolon (;)', 'Slash (/)'],
+                        correct: 1,
+                        explanation: 'Single quotes (\x27) delineate text values in standard SQL syntax.'
+                    },
+                    {
+                        id: 'mcq_sql_2',
+                        level: 'Moderate',
+                        question: 'How do SQL comments like `--` assist attackers in SQL Injection payloads?',
+                        options: ['They speed up query execution', 'They comment out the remainder of the original query logic', 'They encrypt the password', 'They create a new admin table'],
+                        correct: 1,
+                        explanation: 'SQL comment markers like `--` tell the database engine to ignore everything that follows.'
+                    },
+                    {
+                        id: 'mcq_sql_3',
+                        level: 'Hard',
+                        question: 'What is the most effective defense against all SQL Injection vulnerabilities?',
+                        options: ['Blacklisting words like SELECT', 'Using Parameterized Queries (Prepared Statements)', 'Encoding all output as Base64', 'Running SQL as root user'],
+                        correct: 1,
+                        explanation: 'Prepared statements keep user input separated from SQL code logic completely.'
+                    }
+                ],
+                challenges: [
+                    {
+                        id: 'ctf_sql_easy',
+                        level: 'Easy',
+                        pts: 50,
+                        title: 'Classic Auth Bypass',
+                        task: 'Bypass the login form by entering a classic SQLi payload into the Username input field.',
+                        flag: 'FLAG{sqli_bypass_login_success_77}',
+                        hint: 'Type `\x27 OR 1=1 --` into the username field to make the login condition always true.',
+                        widget: 'sqli_login'
+                    },
+                    {
+                        id: 'ctf_sql_mod',
+                        level: 'Moderate',
+                        pts: 100,
+                        title: 'UNION SELECT Data Leak',
+                        task: 'Extract hidden table data using a UNION SELECT payload in the search field.',
+                        flag: 'FLAG{sqli_union_select_data_leak_303}',
+                        hint: 'Try entering: `x\x27 UNION SELECT 1, flag FROM secrets --` in the search box.',
+                        widget: 'sqli_union'
+                    },
+                    {
+                        id: 'ctf_sql_hard',
+                        level: 'Hard',
+                        pts: 150,
+                        title: 'Boolean Blind SQL Extraction',
+                        task: 'Test boolean conditional logic in the query filter below to trigger the secret response flag.',
+                        flag: 'FLAG{sqli_blind_boolean_extraction_912}',
+                        hint: 'Enter \x27 AND (SELECT 1)=1 -- to evaluate the boolean expression to true.',
+                        widget: 'sqli_blind'
+                    }
+                ]
+            },
+            {
+                id: 'topic_xss',
+                title: '4. Cross-Site Scripting (XSS)',
+                category: 'WEB SECURITY',
+                summary: 'Cross-Site Scripting (XSS) occurs when applications render user input into the HTML page without sanitization. Attackers can execute client-side JavaScript in the browser of other users to steal session cookies or manipulate DOM contents.',
+                mcqs: [
+                    {
+                        id: 'mcq_xss_1',
+                        level: 'Easy',
+                        question: 'Where does an XSS payload execute its code?',
+                        options: ['On the database server', 'Inside the victim browser', 'On the domain registrar', 'Inside the firewall router'],
+                        correct: 1,
+                        explanation: 'XSS executes JavaScript within the client browser environment.'
+                    },
+                    {
+                        id: 'mcq_xss_2',
+                        level: 'Moderate',
+                        question: 'Which HTML attribute event handler allows executing JS when an image fails to load?',
+                        options: ['onload', 'onerror', 'onclick', 'onhover'],
+                        correct: 1,
+                        explanation: 'The `onerror` event triggers JavaScript when an image element fails to load its source.'
+                    },
+                    {
+                        id: 'mcq_xss_3',
+                        level: 'Hard',
+                        question: 'How do developers properly sanitize user input to prevent reflected XSS?',
+                        options: ['By deleting single quotes', 'By HTML-entity encoding special characters like <, >, ", \x27', 'By switching to HTTP', 'By hiding the form'],
+                        correct: 1,
+                        explanation: 'HTML entity encoding converts special chars like `<` to `&lt;`, preventing browser HTML parsing.'
+                    }
+                ],
+                challenges: [
+                    {
+                        id: 'ctf_xss_easy',
+                        level: 'Easy',
+                        pts: 50,
+                        title: 'Basic Script Injection',
+                        task: 'Inject a basic `<script>` tag into the input box to execute script in the live sandbox.',
+                        flag: 'FLAG{xss_alert_script_executed_404}',
+                        hint: 'Type `\x3Cscript\x3Ealert("XSS")\x3C/script\x3E` into the payload box below.',
+                        widget: 'xss_basic'
+                    },
+                    {
+                        id: 'ctf_xss_mod',
+                        level: 'Moderate',
+                        pts: 100,
+                        title: 'Event Handler Injection',
+                        task: 'The `<script>` tag is stripped! Inject an HTML image tag with an `onerror` event handler instead.',
+                        flag: 'FLAG{xss_onerror_event_triggered_505}',
+                        hint: 'Type `<img src=x onerror=alert(1)>` to trigger execution without script tags.',
+                        widget: 'xss_event'
+                    },
+                    {
+                        id: 'ctf_xss_hard',
+                        level: 'Hard',
+                        pts: 150,
+                        title: 'DOM Attribute Context XSS',
+                        task: 'Bypass input filtering inside an HTML `href` attribute context using the `javascript:` pseudo-protocol.',
+                        flag: 'FLAG{dom_xss_href_attribute_leak_606}',
+                        hint: 'Type `javascript:alert(1)` into the URL link generator field.',
+                        widget: 'xss_attr'
+                    }
+                ]
+            },
+            {
+                id: 'topic_recon',
+                title: '5. Information Leakage & Recon',
+                category: 'OSINT & RECON',
+                summary: 'Reconnaissance involves discovering public or exposed resources on a server. Files like `/robots.txt`, `.env` configuration files, or unlinked internal API endpoints often leak critical administrative details to attackers.',
+                mcqs: [
+                    {
+                        id: 'mcq_rec_1',
+                        level: 'Easy',
+                        question: 'What is the primary standard purpose of a `robots.txt` file?',
+                        options: ['To configure database connections', 'To tell web crawlers which paths not to index', 'To store user passwords', 'To speed up web page load times'],
+                        correct: 1,
+                        explanation: 'Robots.txt instructs search engine crawlers which directories to avoid indexing.'
+                    },
+                    {
+                        id: 'mcq_rec_2',
+                        level: 'Moderate',
+                        question: 'What sensitive information is frequently exposed if a `.env` file is publicly downloadable?',
+                        options: ['CSS color themes', 'Database passwords and API secret keys', 'Browser cache', 'User web history'],
+                        correct: 1,
+                        explanation: 'Environment `.env` files contain backend credentials, database passwords, and API keys.'
+                    },
+                    {
+                        id: 'mcq_rec_3',
+                        level: 'Hard',
+                        question: 'How do security auditors discover hidden API endpoints embedded in web applications?',
+                        options: ['By restarting their computer', 'By analyzing client-side JavaScript bundles in Developer Tools', 'By editing CSS files', 'By emailing the administrator'],
+                        correct: 1,
+                        explanation: 'Inspecting client-side JS bundle code often reveals hidden or internal backend API routes.'
+                    }
+                ],
+                challenges: [
+                    {
+                        id: 'ctf_rec_easy',
+                        level: 'Easy',
+                        pts: 50,
+                        title: 'Inspect Server robots.txt',
+                        task: 'Fetch the server directive `/robots.txt` file to discover the disallowed administrative directory flag.',
+                        flag: 'FLAG{robots_txt_admin_dir_leak_88}',
+                        hint: 'Click "Fetch /robots.txt" in the console box below.',
+                        widget: 'robots'
+                    },
+                    {
+                        id: 'ctf_rec_mod',
+                        level: 'Moderate',
+                        pts: 100,
+                        title: 'Exposed Configuration .env File',
+                        task: 'Simulate fetching the server configuration file at `/config/.env` to reveal database credentials.',
+                        flag: 'FLAG{exposed_env_secret_db_pass_112}',
+                        hint: 'Click "Download /config/.env" to inspect environment variables.',
+                        widget: 'env_file'
+                    },
+                    {
+                        id: 'ctf_rec_hard',
+                        level: 'Hard',
+                        pts: 150,
+                        title: 'Unlinked Internal API Endpoint',
+                        task: 'Scan the simulated client-side JS bundle code to discover the unlinked internal API endpoint.',
+                        flag: 'FLAG{api_endpoint_recon_discovered_789}',
+                        hint: 'Click "Scan JS Bundle" to find hidden API endpoints like `/api/v1/internal/flag`.',
+                        widget: 'api_scan'
+                    }
+                ]
+            },
+            {
+                id: 'topic_cmd_i',
+                title: '6. OS Command Injection',
+                category: 'SYSTEM SECURITY',
+                summary: 'OS Command Injection occurs when an application executes system shell commands with unsanitized user input. Attackers append shell metacharacters like `;`, `|`, or `&&` to run arbitrary system commands on the host server.',
+                mcqs: [
+                    {
+                        id: 'mcq_cmd_1',
+                        level: 'Easy',
+                        question: 'Which character allows chaining two independent commands together in Linux shell scripts?',
+                        options: ['@', ';', '#', '%'],
+                        correct: 1,
+                        explanation: 'Semicolons `;` separate sequential shell commands in Linux/Unix.'
+                    },
+                    {
+                        id: 'mcq_cmd_2',
+                        level: 'Moderate',
+                        question: 'What does the pipe operator `|` do in command line interpreters?',
+                        options: ['Passes output of first command as input to the second', 'Deletes files', 'Comments out code', 'Logs out user'],
+                        correct: 0,
+                        explanation: 'Piping `|` redirects stdout of the left command to stdin of the right command.'
+                    },
+                    {
+                        id: 'mcq_cmd_3',
+                        level: 'Hard',
+                        question: 'How can attackers bypass space character filters in Linux command injection?',
+                        options: ['Using $IFS shell environment variable', 'Using double semicolons', 'Using uppercase letters', 'Using backslashes only'],
+                        correct: 0,
+                        explanation: 'In Linux shells, `$IFS` (Internal Field Separator) acts as a default whitespace replacement.'
+                    }
+                ],
+                challenges: [
+                    {
+                        id: 'ctf_cmd_easy',
+                        level: 'Easy',
+                        pts: 50,
+                        title: 'Basic Semicolon Injection',
+                        task: 'The ping utility is vulnerable! Append `; cat flag.txt` to the IP input field.',
+                        flag: 'FLAG{cmd_injection_semicolon_cat_202}',
+                        hint: 'Enter `127.0.0.1; cat flag.txt` in the ping test form.',
+                        widget: 'cmd_basic'
+                    },
+                    {
+                        id: 'ctf_cmd_mod',
+                        level: 'Moderate',
+                        pts: 100,
+                        title: 'Piping Command Output',
+                        task: 'Semicolons are blocked! Use the pipe operator `|` to list directory files.',
+                        flag: 'FLAG{cmd_injection_pipe_ls_leak_303}',
+                        hint: 'Enter `127.0.0.1 | cat secret.txt` in the input field.',
+                        widget: 'cmd_pipe'
+                    },
+                    {
+                        id: 'ctf_cmd_hard',
+                        level: 'Hard',
+                        pts: 150,
+                        title: 'Space Character Filter Bypass',
+                        task: 'Spaces are filtered out! Use `$IFS` to bypass the space filter and read `/etc/flag`.',
+                        flag: 'FLAG{cmd_injection_space_bypass_ifs_808}',
+                        hint: 'Enter `127.0.0.1;cat$IFS/etc/flag` into the command prompt.',
+                        widget: 'cmd_ifs'
+                    }
+                ]
+            },
+            {
+                id: 'topic_lfi',
+                title: '7. Directory Traversal (LFI)',
+                category: 'FILE SECURITY',
+                summary: 'Local File Inclusion (LFI) and Directory Traversal occur when file paths supplied by users are used directly in file system operations. Attackers use relative directory paths (`../`) to escape web roots and read sensitive system files.',
+                mcqs: [
+                    {
+                        id: 'mcq_lfi_1',
+                        level: 'Easy',
+                        question: 'What relative directory sequence moves up one directory level in operating systems?',
+                        options: ['./', '../', '.../', '~/'],
+                        correct: 1,
+                        explanation: '`../` traverses up one parent directory level.'
+                    },
+                    {
+                        id: 'mcq_lfi_2',
+                        level: 'Moderate',
+                        question: 'If a basic filter strips `../`, how might an attacker bypass simple non-recursive replacement?',
+                        options: ['Using `....//`', 'Using uppercase `../`', 'Using single dots', 'Using commas'],
+                        correct: 0,
+                        explanation: 'If `../` is stripped once non-recursively from `....//`, the remaining string collapses back into `../`.'
+                    },
+                    {
+                        id: 'mcq_lfi_3',
+                        level: 'Hard',
+                        question: 'What URL-encoded string represents `../` in web requests?',
+                        options: ['%2e%2e%2f', '%00%00%00', '%20%20%20', '%ff%ff%ff'],
+                        correct: 0,
+                        explanation: 'Dot `.` is `%2e` and slash `/` is `%2f`, forming `%2e%2e%2f`.'
+                    }
+                ],
+                challenges: [
+                    {
+                        id: 'ctf_lfi_easy',
+                        level: 'Easy',
+                        pts: 50,
+                        title: 'Basic Relative Path Traversal',
+                        task: 'Traverse up directories to read the system passwd file: `../../etc/passwd`.',
+                        flag: 'FLAG{lfi_path_traversal_passwd_101}',
+                        hint: 'Set file parameter to `../../etc/passwd` in the viewer below.',
+                        widget: 'lfi_basic'
+                    },
+                    {
+                        id: 'ctf_lfi_mod',
+                        level: 'Moderate',
+                        pts: 100,
+                        title: 'Nested Filter Bypass',
+                        task: 'The server strips `../` once! Use nested sequences like `....//....//flag.txt` to bypass.',
+                        flag: 'FLAG{lfi_nested_filter_bypass_404}',
+                        hint: 'Type `....//....//flag.txt` into the parameter field.',
+                        widget: 'lfi_nested'
+                    },
+                    {
+                        id: 'ctf_lfi_hard',
+                        level: 'Hard',
+                        pts: 150,
+                        title: 'URL-Encoded Directory Traversal',
+                        task: 'Bypass input validation filters by submitting URL-encoded traversal characters.',
+                        flag: 'FLAG{lfi_url_encoded_bypass_707}',
+                        hint: 'Enter `%2e%2e%2f%2e%2e%2fsecret/flag` in the request parameter.',
+                        widget: 'lfi_encoded'
+                    }
+                ]
+            },
+            {
+                id: 'topic_auth',
+                title: '8. Broken Session & Cookies',
+                category: 'SESSION SECURITY',
+                summary: 'Session management vulnerabilities arise when HTTP cookies or session tokens are client-editable, predictable, or poorly validated. Modifying role attributes inside cookies or tokens can elevate privileges to Administrator.',
+                mcqs: [
+                    {
+                        id: 'mcq_aut_1',
+                        level: 'Easy',
+                        question: 'Where are session cookies stored on a user system?',
+                        options: ['Inside the client browser storage', 'On the ISP server', 'Inside the DNS root server', 'On the router hardware'],
+                        correct: 0,
+                        explanation: 'Cookies are stored locally by the user browser and transmitted with HTTP requests.'
+                    },
+                    {
+                        id: 'mcq_aut_2',
+                        level: 'Moderate',
+                        question: 'What format consists of three Base64-encoded parts separated by dots (`header.payload.signature`)?',
+                        options: ['JSON Web Token (JWT)', 'SSL Certificate', 'XML Document', 'MD5 Hash'],
+                        correct: 0,
+                        explanation: 'JWTs consist of three dot-separated Base64 sections: Header, Payload, and Signature.'
+                    },
+                    {
+                        id: 'mcq_aut_3',
+                        level: 'Hard',
+                        question: 'What vulnerability occurs when session IDs are generated sequentially (e.g., `sess_1001`, `sess_1002`)?',
+                        options: ['Session Prediction / Hijacking', 'Cross-Site Scripting', 'SQL Injection', 'Buffer Overflow'],
+                        correct: 0,
+                        explanation: 'Sequential session IDs allow attackers to guess valid session keys of other users.'
+                    }
+                ],
+                challenges: [
+                    {
+                        id: 'ctf_aut_easy',
+                        level: 'Easy',
+                        pts: 50,
+                        title: 'Cookie Privilege Escalation',
+                        task: 'Modify the cookie state from `role=guest` to `role=admin` to reveal admin data.',
+                        flag: 'FLAG{cookie_tamper_admin_privilege_555}',
+                        hint: 'Toggle the cookie role switch to "admin" in the widget below.',
+                        widget: 'cookie_tamper'
+                    },
+                    {
+                        id: 'ctf_aut_mod',
+                        level: 'Moderate',
+                        pts: 100,
+                        title: 'JWT Payload Tampering',
+                        task: 'Decode and edit the JWT token payload from `"admin": false` to `"admin": true`.',
+                        flag: 'FLAG{jwt_alg_none_token_bypass_888}',
+                        hint: 'Click "Modify Token Payload" to toggle admin privileges.',
+                        widget: 'jwt_tamper'
+                    },
+                    {
+                        id: 'ctf_aut_hard',
+                        level: 'Hard',
+                        pts: 150,
+                        title: 'Predictable Session ID Guessing',
+                        task: 'Your current session is `sess_002`. Increment or decrement the session ID to hijack the admin session!',
+                        flag: 'FLAG{session_prediction_admin_takeover_999}',
+                        hint: 'Try changing your session key to `sess_001` or `sess_000` in the input field.',
+                        widget: 'sess_predict'
+                    }
+                ]
+            },
+            {
+                id: 'topic_idor',
+                title: '9. Insecure Direct Object Reference (IDOR)',
+                category: 'API SECURITY',
+                summary: 'IDOR vulnerabilities occur when applications expose internal database object identifiers (e.g., `?user_id=102`) without verifying whether the requesting user owns or has authorization to access that object.',
+                mcqs: [
+                    {
+                        id: 'mcq_ido_1',
+                        level: 'Easy',
+                        question: 'What does IDOR stand for in cybersecurity?',
+                        options: ['Insecure Direct Object Reference', 'Internal Data Origin Retrieval', 'Integrated Domain Object Routing', 'Indexed Database Offline Register'],
+                        correct: 0,
+                        explanation: 'IDOR stands for Insecure Direct Object Reference.'
+                    },
+                    {
+                        id: 'mcq_ido_2',
+                        level: 'Moderate',
+                        question: 'Why does IDOR occur in API endpoints?',
+                        options: ['The server lacks proper access control checks for user ownership', 'The website uses dark mode', 'The server uses HTTPS', 'The database is relational'],
+                        correct: 0,
+                        explanation: 'IDOR happens because backend endpoints trust client ID parameters without verifying session authorization.'
+                    },
+                    {
+                        id: 'mcq_ido_3',
+                        level: 'Hard',
+                        question: 'Which technique helps prevent IDOR vulnerabilities on backend servers?',
+                        options: ['Using indirect random GUIDs and checking session authorization on every request', 'Hiding URL parameters with CSS', 'Disabling JavaScript', 'Using long domain names'],
+                        correct: 0,
+                        explanation: 'Combining unpredictable IDs (like UUIDs) with server-side authorization checks mitigates IDOR.'
+                    }
+                ],
+                challenges: [
+                    {
+                        id: 'ctf_ido_easy',
+                        level: 'Easy',
+                        pts: 50,
+                        title: 'URL Parameter ID Tampering',
+                        task: 'You are logged in as User 102 (`?user_id=102`). Change the URL parameter to `user_id=1` to view admin profile data.',
+                        flag: 'FLAG{idor_url_parameter_exposed_123}',
+                        hint: 'Change `user_id=102` to `user_id=1` in the request input.',
+                        widget: 'idor_url'
+                    },
+                    {
+                        id: 'ctf_ido_mod',
+                        level: 'Moderate',
+                        pts: 100,
+                        title: 'JSON API Account Tampering',
+                        task: 'Modify the JSON request payload attribute `"account_id": 2` to `"account_id": 1` in the API console.',
+                        flag: 'FLAG{idor_json_api_payload_bypass_456}',
+                        hint: 'Edit `"account_id": 2` to `1` in the JSON text area and click Send.',
+                        widget: 'idor_json'
+                    },
+                    {
+                        id: 'ctf_ido_hard',
+                        level: 'Hard',
+                        pts: 150,
+                        title: 'HTTP Parameter Pollution (HPP)',
+                        task: 'Append a secondary `id` parameter (`?id=102&id=1`) to override backend parameter parsing.',
+                        flag: 'FLAG{idor_parameter_pollution_master_789}',
+                        hint: 'Enter `id=102&id=1` into the query string generator.',
+                        widget: 'idor_hpp'
+                    }
+                ]
+            },
+            {
+                id: 'topic_upload',
+                title: '10. File Upload Vulnerabilities',
+                category: 'WEB SECURITY',
+                summary: 'Unrestricted File Upload occurs when a server accepts uploaded files without validating file extensions or MIME types. Attackers upload executable scripts (e.g. `.php`) to execute remote code on the web server.',
+                mcqs: [
+                    {
+                        id: 'mcq_upl_1',
+                        level: 'Easy',
+                        question: 'What dangerous file extension allows executing server-side code on Apache/PHP servers?',
+                        options: ['.png', '.txt', '.php', '.css'],
+                        correct: 2,
+                        explanation: 'Files with `.php` extension are parsed and executed as server-side scripts on PHP servers.'
+                    },
+                    {
+                        id: 'mcq_upl_2',
+                        level: 'Moderate',
+                        question: 'What is a double extension bypass technique in file upload attacks?',
+                        options: ['Uploading shell.php.jpg to trick weak extension checks', 'Uploading two files at once', 'Naming a file twice', 'Zipping a file'],
+                        correct: 0,
+                        explanation: 'Double extensions like `shell.php.jpg` bypass naive check filters that only verify the end suffix.'
+                    },
+                    {
+                        id: 'mcq_upl_3',
+                        level: 'Hard',
+                        question: 'What HTTP header field specifies the media type of uploaded files?',
+                        options: ['Content-Type', 'User-Agent', 'Authorization', 'Accept-Encoding'],
+                        correct: 0,
+                        explanation: 'The `Content-Type` header (e.g. `image/png`) tells servers the MIME type of uploaded files.'
+                    }
+                ],
+                challenges: [
+                    {
+                        id: 'ctf_upl_easy',
+                        level: 'Easy',
+                        pts: 50,
+                        title: 'Unrestricted File Upload',
+                        task: 'Upload a file named `shell.php` directly to execute code and retrieve the flag.',
+                        flag: 'FLAG{file_upload_unrestricted_php_111}',
+                        hint: 'Set file input name to `shell.php` and click Upload.',
+                        widget: 'upload_basic'
+                    },
+                    {
+                        id: 'ctf_upl_mod',
+                        level: 'Moderate',
+                        pts: 100,
+                        title: 'Double Extension Bypass',
+                        task: 'The server blocks direct `.php` files! Use a double extension like `shell.php.jpg` to bypass.',
+                        flag: 'FLAG{file_upload_double_extension_222}',
+                        hint: 'Set filename to `shell.php.jpg` in the simulator box below.',
+                        widget: 'upload_double'
+                    },
+                    {
+                        id: 'ctf_upl_hard',
+                        level: 'Hard',
+                        pts: 150,
+                        title: 'MIME Content-Type Spoofing',
+                        task: 'The server checks `Content-Type`! Upload `shell.php` with header set to `image/png`.',
+                        flag: 'FLAG{file_upload_mime_type_spoof_333}',
+                        hint: 'Select Content-Type as `image/png` while keeping file name `shell.php`.',
+                        widget: 'upload_mime'
+                    }
+                ]
+            }
+        ];
+
+        let userState = {
+            activeTopicId: 'topic_web_source',
+            completedMcqs: [],
+            solvedFlags: [],
+            totalScore: 0
+        };
+
+        function loadSavedProgress() {
+            const saved = localStorage.getItem('cyber_ctf_progress_v2');
+            if (saved) {
+                try {
+                    userState = { ...userState, ...JSON.parse(saved) };
+                } catch(e) {}
+            }
+            recalculateScore();
+        }
+
+        function saveProgress() {
+            localStorage.setItem('cyber_ctf_progress_v2', JSON.stringify(userState));
+            recalculateScore();
+            renderSidebar();
+        }
+
+        function recalculateScore() {
+            let score = 0;
+            TOPICS_DATA.forEach(t => {
+                t.mcqs.forEach(m => {
+                    if (userState.completedMcqs.includes(m.id)) {
+                        score += 25; // 25 pts per MCQ
+                    }
+                });
+                t.challenges.forEach(c => {
+                    if (userState.solvedFlags.includes(c.id)) {
+                        score += c.pts; // 50, 100, 150
+                    }
+                });
+            });
+            userState.totalScore = score;
+            document.getElementById('userScore').innerText = `${score} PTS`;
+            
+            let totalCTFs = 0;
+            TOPICS_DATA.forEach(t => totalCTFs += t.challenges.length);
+            const solvedCount = userState.solvedFlags.length;
+            document.getElementById('completionBadge').innerText = `${solvedCount} / ${totalCTFs} Flags`;
+            document.getElementById('progressBar').style.width = `${(solvedCount / totalCTFs) * 100}%`;
+        }
+
+        function confirmResetProgress() {
+            document.getElementById('modalOverlay').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('modalOverlay').classList.add('hidden');
+        }
+
+        function executeReset() {
+            closeModal();
+            userState.completedMcqs = [];
+            userState.solvedFlags = [];
+            saveProgress();
+            loadTopic(userState.activeTopicId);
+            showToast("All CTF progress has been reset!", "info");
+        }
+
+        function renderSidebar() {
+            const nav = document.getElementById('topicNavList');
+            nav.innerHTML = '';
+
+            TOPICS_DATA.forEach(t => {
+                const isActive = t.id === userState.activeTopicId;
+                const solvedInTopic = t.challenges.filter(c => userState.solvedFlags.includes(c.id)).length;
+                const totalInTopic = t.challenges.length;
+
+                const btn = document.createElement('button');
+                btn.onclick = () => selectTopic(t.id);
+                btn.className = `w-full text-left p-2.5 rounded-xl border transition-all duration-150 flex items-center justify-between ${
+                    isActive 
+                        ? 'bg-cyber-panel border-cyber-accent/60 text-white shadow-md glow-green' 
+                        : 'bg-cyber-card hover:bg-cyber-panel/50 border-cyber-border text-slate-300'
+                }`;
+
+                btn.innerHTML = `
+                    <div class="flex flex-col gap-0.5 overflow-hidden">
+                        <span class="text-[9px] font-mono font-semibold uppercase text-cyber-cyan">${t.category}</span>
+                        <span class="text-xs font-medium truncate">${t.title}</span>
+                    </div>
+                    <div class="flex items-center space-x-1 flex-shrink-0">
+                        <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyber-bg border border-cyber-border text-slate-400">
+                            ${solvedInTopic}/${totalInTopic}
+                        </span>
+                    </div>
+                `;
+                nav.appendChild(btn);
+            });
+        }
+
+        function selectTopic(topicId) {
+            userState.activeTopicId = topicId;
+            renderSidebar();
+            loadTopic(topicId);
+        }
+
+        function loadTopic(topicId) {
+            const t = TOPICS_DATA.find(item => item.id === topicId);
+            if (!t) return;
+
+            const workspace = document.getElementById('topicWorkspace');
+
+            // Render MCQs
+            let mcqHtml = t.mcqs.map((m, idx) => {
+                const isAnswered = userState.completedMcqs.includes(m.id);
+                return `
+                    <div class="p-3.5 rounded-xl bg-cyber-bg/70 border border-cyber-border space-y-2.5">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[11px] font-mono font-bold text-cyber-cyan uppercase">
+                                MCQ ${idx+1} [${m.level}] (+25 PTS)
+                            </span>
+                            ${isAnswered ? '<span class="text-[11px] font-mono text-cyber-accent flex items-center gap-1"><i class="fa-solid fa-check"></i> Answered</span>' : ''}
+                        </div>
+                        <p class="text-xs sm:text-sm text-slate-200 font-medium">${m.question}</p>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1" id="mcq_opts_${m.id}">
+                            ${m.options.map((opt, optIdx) => `
+                                <button onclick="checkMcqAnswer('${m.id}', ${optIdx}, ${m.correct})" 
+                                    class="text-left px-3 py-1.5 rounded-lg text-xs font-mono border border-cyber-border bg-cyber-panel/60 hover:bg-cyber-panel text-slate-300 transition ${isAnswered && optIdx === m.correct ? 'border-cyber-accent text-cyber-accent font-bold bg-cyber-accent/10' : ''}">
+                                    ${String.fromCharCode(65 + optIdx)}. ${opt}
+                                </button>
+                            `).join('')}
+                        </div>
+                        <div id="mcq_explain_${m.id}" class="${isAnswered ? '' : 'hidden'} p-2 rounded bg-cyber-panel/50 border border-cyber-border text-xs text-slate-300">
+                            💡 <span class="font-semibold text-cyber-gold">Explanation:</span> ${m.explanation}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Render CTF Challenges (Easy, Moderate, Hard)
+            let ctfHtml = t.challenges.map((c) => {
+                const isSolved = userState.solvedFlags.includes(c.id);
+                const levelColor = c.level === 'Easy' ? 'text-cyber-accent border-cyber-accent/30 bg-cyber-accent/10' :
+                                  c.level === 'Moderate' ? 'text-cyber-yellow border-cyber-yellow/30 bg-cyber-yellow/10' :
+                                  'text-cyber-magenta border-cyber-magenta/30 bg-cyber-magenta/10';
+
+                return `
+                    <div class="p-4 rounded-xl bg-cyber-panel/80 border border-cyber-border space-y-3.5 shadow-md">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-2">
+                                <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase border ${levelColor}">
+                                    ${c.level} (${c.pts} PTS)
+                                </span>
+                                <h4 class="text-sm font-bold text-white">${c.title}</h4>
+                            </div>
+                            ${isSolved ? '<span class="text-xs font-mono font-bold text-cyber-accent bg-cyber-accent/20 px-2 py-0.5 rounded border border-cyber-accent/40"><i class="fa-solid fa-check"></i> SOLVED</span>' : ''}
+                        </div>
+
+                        <p class="text-xs sm:text-sm text-slate-300">${c.task}</p>
+
+                        <!-- Interactive Challenge Sandbox Widget -->
+                        ${renderWidget(c)}
+
+                        <!-- Flag Input Form -->
+                        <form onsubmit="handleFlagSubmit(event, '${c.id}', '${c.flag}', ${c.pts})" class="flex flex-col sm:flex-row gap-2 pt-1">
+                            <input type="text" id="flagInput_${c.id}" placeholder="FLAG{...}" 
+                                class="flex-1 bg-cyber-bg border border-cyber-border rounded-lg px-3 py-2 text-xs font-mono text-slate-100 focus:outline-none focus:border-cyber-accent"
+                                ${isSolved ? `value="${c.flag}" disabled` : ''}>
+                            <button type="submit" ${isSolved ? 'disabled' : ''} 
+                                class="px-4 py-2 bg-cyber-accent hover:bg-emerald-500 disabled:opacity-50 text-slate-950 font-bold font-mono text-xs rounded-lg transition flex items-center justify-center gap-1.5 shadow-md">
+                                <i class="fa-solid fa-paper-plane"></i> Submit Flag
+                            </button>
+                        </form>
+
+                        <div class="flex items-center justify-between text-xs pt-0.5">
+                            <button onclick="toggleHint('${c.id}')" class="text-cyber-yellow hover:underline flex items-center gap-1 font-mono text-[11px]">
+                                <i class="fa-solid fa-lightbulb"></i> <span id="hintBtnText_${c.id}">Show Hint</span>
+                            </button>
+                        </div>
+
+                        <div id="hintBox_${c.id}" class="hidden p-2.5 rounded bg-cyber-bg border border-cyber-yellow/30 text-xs font-mono text-cyber-yellow">
+                            💡 ${c.hint}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            workspace.innerHTML = `
+                <div class="space-y-2 pb-3 border-b border-cyber-border">
+                    <div class="flex items-center space-x-2">
+                        <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-cyber-cyan/10 text-cyber-cyan border border-cyber-cyan/20">${t.category}</span>
+                    </div>
+                    <h2 class="text-xl sm:text-2xl font-bold text-white">${t.title}</h2>
+                </div>
+
+                <!-- Theory Summary -->
+                <div class="p-4 rounded-xl bg-cyber-panel/60 border border-cyber-border space-y-1.5">
+                    <h3 class="text-xs font-mono uppercase text-cyber-cyan tracking-wider font-bold flex items-center gap-1.5">
+                        <i class="fa-solid fa-book-open"></i> Topic Summary
+                    </h3>
+                    <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">${t.summary}</p>
+                </div>
+
+                <!-- MCQs Section -->
+                <div class="space-y-3">
+                    <h3 class="text-xs font-mono uppercase text-slate-400 tracking-wider font-bold flex items-center gap-2">
+                        <i class="fa-solid fa-list-check text-cyber-yellow"></i> Concept Questions (3 Levels)
+                    </h3>
+                    ${mcqHtml}
+                </div>
+
+                <!-- CTF Section -->
+                <div class="space-y-4 pt-2">
+                    <h3 class="text-xs font-mono uppercase text-slate-400 tracking-wider font-bold flex items-center gap-2">
+                        <i class="fa-solid fa-flag text-cyber-gold"></i> Practical CTF Challenges (Easy / Moderate / Hard)
+                    </h3>
+                    ${ctfHtml}
+                </div>
+            `;
+        }
+
+        function renderWidget(c) {
+            switch(c.widget) {
+                case 'comment':
+                    return `<div class="p-3 rounded bg-cyber-bg border border-cyber-border font-mono text-xs text-slate-400">
+                        <p>// Target HTML source comment exists in page DOM.</p>
+                        <p class="text-slate-500 text-[11px] mt-1">&lt;!-- Right click -> Inspect or View Page Source to find FLAG{...} --&gt;</p>
+                    </div>`;
+                
+                case 'hidden_input':
+                    return `<div class="p-3 rounded bg-cyber-bg border border-cyber-border space-y-2 font-mono text-xs">
+                        <span class="text-slate-400">Target DOM Form Container:</span>
+                        <form onsubmit="event.preventDefault()" class="p-2 bg-cyber-card border border-cyber-border rounded">
+                            <label class="text-slate-300 text-[11px]">User Account Status: Active</label>
+                            <input type="hidden" name="ctf_secret_flag" value="FLAG{hidden_input_css_revealed_902}">
+                        </form>
+                    </div>`;
+
+                case 'console':
+                    return `<div class="p-3 rounded bg-cyber-bg border border-cyber-border font-mono text-xs text-cyber-cyan">
+                        <p>> Run <span class="text-white bg-cyber-panel px-1 rounded">getFlag()</span> or inspect <span class="text-white bg-cyber-panel px-1 rounded">localStorage.getItem('secret_ctf_key')</span> in browser console (F12).</p>
+                    </div>`;
+
+                case 'b64':
+                    return `<div class="p-3 rounded bg-cyber-bg border border-cyber-border space-y-2 font-mono text-xs">
+                        <div class="flex gap-2">
+                            <input type="text" id="w_b64" value="RkxBR3tiYXNlNjRfZGVjb2RlX25vb2JfMmE3fQ==" class="flex-1 bg-cyber-panel border border-cyber-border rounded px-2.5 py-1 text-slate-200">
+                            <button onclick="runB64()" class="px-3 py-1 bg-cyber-cyan text-slate-950 font-bold rounded">Decode</button>
+                        </div>
+                        <div id="res_b64" class="p-2 bg-cyber-card border border-cyber-border rounded text-cyber-accent text-[11px]">Result will appear here...</div>
+                    </div>`;
+
+                case 'rot13':
+                    return `<div class="p-3 rounded bg-cyber-bg border border-cyber-border space-y-2 font-mono text-xs">
+                        <div class="flex gap-2">
+                            <input type="text" id="w_rot13" value="SYNT{rot13_pvcure_f3per3g_55}" class="flex-1 bg-cyber-panel border border-cyber-border rounded px-2.5 py-1 text-slate-200">
+                            <button onclick="runRot13()" class="px-3 py-1 bg-cyber-cyan text-slate-950 font-bold rounded">Shift 13</button>
+                        </div>
+                        <div id="res_rot13" class="p-2 bg-cyber-card border border-cyber-border rounded text-cyber-accent text-[11px]">Result will appear here...</div>
+                    </div>`;
+
+                case 'hex':
+                    return `<div class="p-3 rounded bg-cyber-bg border border-cyber-border space-y-2 font-mono text-xs">
+                        <div class="flex gap-2">
+                            <input type="text" id="w_hex" value="464c41477b6865785f746f5f61736369695f6465636f64655f3939307d" class="flex-1 bg-cyber-panel border border-cyber-border rounded px-2.5 py-1 text-slate-200">
+                            <button onclick="runHex()" class="px-3 py-1 bg-cyber-cyan text-slate-950 font-bold rounded">Hex -> ASCII</button>
+                        </div>
+                        <div id="res_hex" class="p-2 bg-cyber-card border border-cyber-border rounded text-cyber-accent text-[11px]">Result will appear here...</div>
+                    </div>`;
+
+                case 'sqli_login':
+                    return `<div class="p-3 rounded bg-cyber-bg border border-cyber-border space-y-2 font-mono text-xs">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <input type="text" id="w_sqli_user" placeholder="Username" value="' OR 1=1 --" class="bg-cyber-panel border border-cyber-border rounded px-2.5 py-1 text-slate-200">
+                            <input type="password" id="w_sqli_pass" placeholder="Password" value="password" class="bg-cyber-panel border border-cyber-border rounded px-2.5 py-1 text-slate-200">
+                        </div>
+                        <button onclick="runSqliLogin()" class="px-3 py-1 bg-cyber-accent text-slate-950 font-bold rounded">Execute Query</button>
+                        <div id="res_sqli_login" class="p-2 bg-cyber-card border border-cyber-border rounded text-slate-300 text-[11px]">Query Output...</div>
+                    </div>`;
+
+                case 'sqli_union':
+                    return `<div class="p-3 rounded bg-cyber-bg border border-cyber-border space-y-2 font-mono text-xs">
+                        <div class="flex gap-2">
+                            <input type="text" id="w_sqli_union" value="x' UNION SELECT 1, flag FROM secrets --" class="flex-1 bg-cyber-panel border border-cyber-border rounded px-2.5 py-1 text-slate-200">
+                            <button onclick="runSqliUnion()" class="px-3 py-1 bg-cyber-cyan text-slate-950 font-bold rounded">Search</button>
+                        </div>
+                        <div id="res_sqli_union" class="p-2 bg-cyber-card border border-cyber-border rounded text-slate-300 text-[11px]">Database Result...</div>
+                    </div>`;
+
+                case 'sqli_blind':
+                    return `<div class="p-3 rounded bg-cyber-bg border border-cyber-border space-y-2 font-mono text-xs">
+                        <div class="flex gap-2">
+                            <input type="text" id="w_sqli_blind" value="' AND (SELECT 1)=1 --" class="flex-1 bg-cyber-panel border border-cyber-border rounded px-2.5 py-1 text-slate-200">
+                            <button onclick="runSqliBlind()" class="px-3 py-1 bg-cyber-yellow text-slate-950 font-bold rounded">Test Condition</button>
+                        </div>
+                        <div id="res_sqli_blind" class="p-2 bg-cyber-card border border-cyber-border rounded text-slate-300 text-[11px]">Boolean State Output...</div>
+                    </div>`;
+
+                case 'xss_basic':
+                    return `<div class="p-3 rounded bg-cyber-bg border border-cyber-border space-y-2 font-mono text-xs">
+                        <div class="flex gap-2">
+                            <input type="text" id="w_xss_b" value='&lt;script&gt;alert("XSS")&lt;/script&gt;' class="flex-1 bg-cyber-panel border border-cyber-border rounded px-2.5 py-1 text-slate-200">
+                            <button onclick="runXssBasic()" class="px-3 py-1 bg-cyber-cyan text-slate-950 font-bold rounded">Inject</button>
+                        </div>
+                        <div id="res_xss_b" class="p-2 bg-cyber-card border border-cyber-border rounded text-slate-300 text-[11px]">Sandbox output...</div>
+                    </div>`;
+
+                case 'xss_event':
+                    return `<div class="p-3 rounded bg-cyber-bg border border-cyber-border space-y-2 font-mono text-xs">
+                        <div class="flex gap-2">
+                            <input type="text" id="w_xss_e" value='&lt;img src=x onerror=alert(1)&gt;' class="flex-1 bg-cyber-panel border border-cyber-border rounded px-2.5 py-1 text-slate-200">
+                            <button onclick="runXssEvent()" class="px-3 py-1 bg-cyber-cyan text-slate-950 font-bold rounded">Inject HTML</button>
+                        </div>
+                        <div id="res_xss_e" class="p-2 bg-cyber-card border border-cyber-border rounded text-slate-300 text-[11px]">Sandbox output...</div>
+                    </div>`;
+
+                case 'xss_attr':
+                    return `<div class="p-3 rounded bg-cyber-bg border border-cyber-border space-y-2 font-mono text-xs">
+                        <div class="flex gap-2">
+                            <input type="text" id="w_xss_a" value='javascript:alert(1)' class="flex-1 bg-cyber-panel border border-cyber-border rounded px-2.5 py-1 text-slate-200">
+                            <button onclick="runXssAttr()" class="px-3 py-1 bg-cyber-cyan text-slate-950 font-bold rounded">Set Link Href</button>
+                        </div>
+                        <div id="res_xss_a" class="p-2 bg-cyber-card border border-cyber-border rounded text-slate-300 text-[11px]">Rendered element preview...</div>
+                    </div>`;
+
+                case 'robots':
+                    return `<div class="p-3 rounded bg-cyber-bg border border-cyber-border space-y-2 font-mono text-xs">
+                        <button onclick="runRobots()" class="px-3 py-1 bg-cyber-panel border border-cyber-cyan text-cyber-cyan rounded hover:bg-cyber-cyan hover:text-slate-950 transition">Fetch /robots.txt</button>
+                        <div id="res_robots" class="p-2 bg-cyber-card border border-cyber-border rounded text-slate-300 whitespace-pre text-[11px]">Click button to fetch server directives...</div>
+                    </div>`;
+
+                case 'env_file':
+                    return `<div class="p-3 rounded bg-cyber-bg border border-cyber-border space-y-2 font-mono text-xs">
+                        <button onclick="runEnv()" class="px-3 py-1 bg-cyber-panel border border-cyber-cyan text-cyber-cyan rounded hover:bg-cyber-cyan hover:text-slate-950 transition">Download /config/.env</button>
+                        <div id="res_env" class="p-2 bg-cyber-card border border-cyber-border rounded text-slate-300 whitespace-pre text-[11px]">Click button to simulate downloading .env file...</div>
+                    </div>`;
+
+                case 'api_scan':
+                    return `<div class="p-3 rounded bg-cyber-bg border border-cyber-border space-y-2 font-mono text-xs">
+                        <button onclick="runApiScan()" class="px-3 py-1 bg-cyber-panel border border-cyber-cyan text-cyber-cyan rounded hover:bg-cyber-cyan hover:text-slate-950 transition">Scan JS Bundle Code</button>
+                        <div id="res_api_scan" class="p-2 bg-cyber-card border border-cyber-border rounded text-slate-300 whitespace-pre text-[11px]">Click button to scan JavaScript routes...</div>
+                    </div>`;
+
+                case 'cmd_basic':
+                    return `<div class="p-3 rounded bg-cyber-bg border border-cyber-border space-y-2 font-mono text-xs">
+                        <div class="flex gap-2">
+                            <input type="text" id="w_cmd_b" value="127.0.0.1; cat flag.txt" class="flex-1 bg-cyber-panel border border-cyber-border rounded px-2.5 py-1 text-slate-200">
+                            <button onclick="runCmdBasic()" class="px-3 py-1 bg-cyber-accent text-slate-950 font-bold rounded">Ping</button>
+                        </div>
+                        <div id="res_cmd_b" class="p-2 bg-cyber-card border border-cyber-border rounded text-slate-300 text-[11px]">Terminal output...</div>
+                    </div>`;
+
+                case 'cmd_pipe':
+                    return `<div class="p-3 rounded bg-cyber-bg border border-cyber-border space-y-2 font-mono text-xs">
+                        <div class="flex gap-2">
+                            <input type="text" id="w_cmd_p" value="127.0.0.1 | cat secret.txt" class="flex-1 bg-cyber-panel border border-cyber-border rounded px-2.5 py-1 text-slate-200">
+                            <button onclick="runCmdPipe()" class="px-3 py-1 bg-cyber-accent text-slate-950 font-bold rounded">Ping</button>
+                        </div>
+                        <div id="res_cmd_p" class="p-2 bg-cyber-card border border-cyber-border rounded text-slate-300 text-[11px]">Terminal output...</div>
+                    </div>`;
+
+                case 'cmd_ifs':
+                    return `<div class="p-3 rounded bg-cyber-bg border border-cyber-border space-y-2 font-mono text-xs">
+                        <div class="flex gap-2">
+                            <input type="text" id="w_cmd_i" value="127.0.0.1;cat$IFS/etc/flag" class="flex-1 bg-cyber-panel border border-cyber-border rounded px-2.5 py-1 text-slate-200">
+                            <button onclick="runCmdIfs()" class="px-3 py-1 bg-cyber-accent text-slate-950 font-bold rounded">Ping</button>
+                        </div>
+                        <div id="res_cmd_i" class="p-2 bg-cyber-card border border-cyber-border rounded text-slate-300 text-[11px]">Terminal output...</div>
+                    </div>`;
+
+                case 'lfi_basic':
+                    return `<div class="p-3 rounded bg-cyber-bg border border-cyber-border space-y-2 font-mono text-xs">
+                        <div class="flex gap-2">
+                            <span class="text-slate-400 self-center">?file=</span>
+                            <input type="text" id="w_lfi_b" value="../../etc/passwd" class="flex-1 bg-cyber-panel border border-cyber-border rounded px-2.5 py-1 text-slate-200">
+                            <button onclick="runLfiBasic()" class="px-3 py-1 bg-cyber-cyan text-slate-950 font-bold rounded">Fetch File</button>
+                        </div>
+                        <div id="res_lfi_b" class="p-2 bg-cyber-card border border-cyber-border rounded text-slate-300 whitespace-pre text-[11px]">File content...</div>
+                    </div>`;
+
+                case 'lfi_nested':
+                    return `<div class="p-3 rounded bg-cyber-bg border border-cyber-border space-y-2 font-mono text-xs">
+                        <div class="flex gap-2">
+                            <span class="text-slate-400 self-center">?file=</span>
+                            <input type="text" id="w_lfi_n" value="....//....//flag.txt" class="flex-1 bg-cyber-panel border border-cyber-border rounded px-2.5 py-1 text-slate-200">
+                            <button onclick="runLfiNested()" class="px-3 py-1 bg-cyber-cyan text-slate-950 font-bold rounded">Fetch File</button>
+                        </div>
+                        <div id="res_lfi_n" class="p-2 bg-cyber-card border border-cyber-border rounded text-slate-300 whitespace-pre text-[11px]">File content...</div>
+                    </div>`;
+
+                case 'lfi_encoded':
+                    return `<div class="p-3 rounded bg-cyber-bg border border-cyber-border space-y-2 font-mono text-xs">
+                        <div class="flex gap-2">
+                            <span class="text-slate-400 self-center">?file=</span>
+                            <input type="text" id="w_lfi_e" value="%2e%2e%2f%2e%2e%2fsecret/flag" class="flex-1 bg-cyber-panel border border-cyber-border rounded px-2.5 py-1 text-slate-200">
+                            <button onclick="runLfiEncoded()" class="px-3 py-1 bg-cyber-cyan text-slate-950 font-bold rounded">Fetch File</button>
+                        </div>
+                        <div id="res_lfi_e" class="p-2 bg-cyber-card border border-cyber-border rounded text-slate-300 whitespace-pre text-[11px]">File content...</div>
+                    </div>`;
+
+                case 'cookie_tamper':
+                    return `<div class="p-3 rounded bg-cyber-bg border border-cyber-border space-y-2 font-mono text-xs">
+                        <div class="flex items-center justify-between">
+                            <span class="text-slate-400">Cookie: <code id="cookie_val" class="text-cyber-cyan">role=guest</code></span>
+                            <button onclick="toggleCookieRole()" class="px-3 py-1 bg-cyber-yellow text-slate-950 font-bold rounded">Toggle Cookie Role</button>
+                        </div>
+                        <div id="res_cookie" class="p-2 bg-cyber-card border border-cyber-border rounded text-slate-300 text-[11px]">Session payload...</div>
+                    </div>`;
+
+                case 'jwt_tamper':
+                    return `<div class="p-3 rounded bg-cyber-bg border border-cyber-border space-y-2 font-mono text-xs">
+                        <div class="flex items-center justify-between">
+                            <span class="text-slate-400">JWT Admin Claim: <code id="jwt_claim" class="text-rose-400">"admin": false</code></span>
+                            <button onclick="toggleJwtAdmin()" class="px-3 py-1 bg-cyber-yellow text-slate-950 font-bold rounded">Modify Token Payload</button>
+                        </div>
+                        <div id="res_jwt" class="p-2 bg-cyber-card border border-cyber-border rounded text-slate-300 text-[11px]">Decoded Header & Payload...</div>
+                    </div>`;
+
+                case 'sess_predict':
+                    return `<div class="p-3 rounded bg-cyber-bg border border-cyber-border space-y-2 font-mono text-xs">
+                        <div class="flex gap-2">
+                            <span class="text-slate-400 self-center">session_id=</span>
+                            <input type="text" id="w_sess_p" value="sess_001" class="flex-1 bg-cyber-panel border border-cyber-border rounded px-2.5 py-1 text-slate-200">
+                            <button onclick="runSessPredict()" class="px-3 py-1 bg-cyber-cyan text-slate-950 font-bold rounded">Authenticate</button>
+                        </div>
+                        <div id="res_sess_p" class="p-2 bg-cyber-card border border-cyber-border rounded text-slate-300 text-[11px]">Account Session Details...</div>
+                    </div>`;
+
+                case 'idor_url':
+                    return `<div class="p-3 rounded bg-cyber-bg border border-cyber-border space-y-2 font-mono text-xs">
+                        <div class="flex gap-2">
+                            <span class="text-slate-400 self-center">GET /api/user?user_id=</span>
+                            <input type="text" id="w_idor_u" value="1" class="w-20 bg-cyber-panel border border-cyber-border rounded px-2.5 py-1 text-slate-200">
+                            <button onclick="runIdorUrl()" class="px-3 py-1 bg-cyber-cyan text-slate-950 font-bold rounded">Send Request</button>
+                        </div>
+                        <div id="res_idor_u" class="p-2 bg-cyber-card border border-cyber-border rounded text-slate-300 text-[11px]">HTTP Response...</div>
+                    </div>`;
+
+                case 'idor_json':
+                    return `<div class="p-3 rounded bg-cyber-bg border border-cyber-border space-y-2 font-mono text-xs">
+                        <textarea id="w_idor_j" rows="2" class="w-full bg-cyber-panel border border-cyber-border rounded p-2 text-slate-200 font-mono text-xs">{ "account_id": 1, "action": "get_profile" }</textarea>
+                        <button onclick="runIdorJson()" class="px-3 py-1 bg-cyber-cyan text-slate-950 font-bold rounded">POST Request</button>
+                        <div id="res_idor_j" class="p-2 bg-cyber-card border border-cyber-border rounded text-slate-300 text-[11px]">API Response Body...</div>
+                    </div>`;
+
+                case 'idor_hpp':
+                    return `<div class="p-3 rounded bg-cyber-bg border border-cyber-border space-y-2 font-mono text-xs">
+                        <div class="flex gap-2">
+                            <span class="text-slate-400 self-center">GET /profile?</span>
+                            <input type="text" id="w_idor_h" value="id=102&id=1" class="flex-1 bg-cyber-panel border border-cyber-border rounded px-2.5 py-1 text-slate-200">
+                            <button onclick="runIdorHpp()" class="px-3 py-1 bg-cyber-cyan text-slate-950 font-bold rounded">Send</button>
+                        </div>
+                        <div id="res_idor_h" class="p-2 bg-cyber-card border border-cyber-border rounded text-slate-300 text-[11px]">Server Parameter Parsing...</div>
+                    </div>`;
+
+                case 'upload_basic':
+                    return `<div class="p-3 rounded bg-cyber-bg border border-cyber-border space-y-2 font-mono text-xs">
+                        <div class="flex gap-2">
+                            <input type="text" id="w_upl_b" value="shell.php" class="flex-1 bg-cyber-panel border border-cyber-border rounded px-2.5 py-1 text-slate-200">
+                            <button onclick="runUplBasic()" class="px-3 py-1 bg-cyber-accent text-slate-950 font-bold rounded">Upload</button>
+                        </div>
+                        <div id="res_upl_b" class="p-2 bg-cyber-card border border-cyber-border rounded text-slate-300 text-[11px]">Upload status log...</div>
+                    </div>`;
+
+                case 'upload_double':
+                    return `<div class="p-3 rounded bg-cyber-bg border border-cyber-border space-y-2 font-mono text-xs">
+                        <div class="flex gap-2">
+                            <input type="text" id="w_upl_d" value="shell.php.jpg" class="flex-1 bg-cyber-panel border border-cyber-border rounded px-2.5 py-1 text-slate-200">
+                            <button onclick="runUplDouble()" class="px-3 py-1 bg-cyber-accent text-slate-950 font-bold rounded">Upload</button>
+                        </div>
+                        <div id="res_upl_d" class="p-2 bg-cyber-card border border-cyber-border rounded text-slate-300 text-[11px]">Upload status log...</div>
+                    </div>`;
+
+                case 'upload_mime':
+                    return `<div class="p-3 rounded bg-cyber-bg border border-cyber-border space-y-2 font-mono text-xs">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <input type="text" id="w_upl_m_file" value="shell.php" class="bg-cyber-panel border border-cyber-border rounded px-2.5 py-1 text-slate-200">
+                            <select id="w_upl_m_type" class="bg-cyber-panel border border-cyber-border rounded px-2 py-1 text-slate-200">
+                                <option value="text/php">Content-Type: text/php</option>
+                                <option value="image/png" selected>Content-Type: image/png</option>
+                            </select>
+                        </div>
+                        <button onclick="runUplMime()" class="px-3 py-1 bg-cyber-accent text-slate-950 font-bold rounded">Send HTTP Request</button>
+                        <div id="res_upl_m" class="p-2 bg-cyber-card border border-cyber-border rounded text-slate-300 text-[11px]">Upload status log...</div>
+                    </div>`;
+
+                default:
+                    return '';
+            }
+        }
+
+        function runB64() {
+            try {
+                const decoded = atob(document.getElementById('w_b64').value);
+                document.getElementById('res_b64').innerHTML = `Decoded String: <span class="text-white font-bold select-all">${decoded}</span>`;
+            } catch(e) { document.getElementById('res_b64').innerText = "Error: Invalid Base64 String"; }
+        }
+
+        function runRot13() {
+            const val = document.getElementById('w_rot13').value;
+            const shifted = val.replace(/[a-zA-Z]/g, c => String.fromCharCode((c <= 'Z' ? 90 : 122) >= (c = c.charCodeAt(0) + 13) ? c : c - 26));
+            document.getElementById('res_rot13').innerHTML = `Shifted Result: <span class="text-white font-bold select-all">${shifted}</span>`;
+        }
+
+        function runHex() {
+            const hex = document.getElementById('w_hex').value.replace(/\s+/g, '');
+            let str = '';
+            for (let i = 0; i < hex.length; i += 2) {
+                str += String.fromCharCode(parseInt(hex.substr(i, 2), 16));
+            }
+            document.getElementById('res_hex').innerHTML = `ASCII Result: <span class="text-white font-bold select-all">${str}</span>`;
+        }
+
+        function runSqliLogin() {
+            const u = document.getElementById('w_sqli_user').value;
+            const res = document.getElementById('res_sqli_login');
+            if (u.includes("' OR") || u.includes("1=1") || u.includes("='1")) {
+                res.innerHTML = `<span class="text-cyber-accent">[SUCCESS] Query Evaluated TRUE! Authenticated as Admin.<br>EXPOSED FLAG: <b>FLAG{sqli_bypass_login_success_77}</b></span>`;
+            } else { res.innerText = "[FAILED] Invalid login credentials or query syntax error."; }
+        }
+
+        function runSqliUnion() {
+            const q = document.getElementById('w_sqli_union').value;
+            const res = document.getElementById('res_sqli_union');
+            if (q.toLowerCase().includes('union') && q.toLowerCase().includes('secrets')) {
+                res.innerHTML = `<span class="text-cyber-accent">[DATA LEAK]: Dumping Table 'secrets' -> <b>FLAG{sqli_union_select_data_leak_303}</b></span>`;
+            } else { res.innerText = "[SQL SEARCH]: 0 Rows Returned."; }
+        }
+
+        function runSqliBlind() {
+            const q = document.getElementById('w_sqli_blind').value;
+            const res = document.getElementById('res_sqli_blind');
+            if (q.includes("1)=1") || q.includes("1=1")) {
+                res.innerHTML = `<span class="text-cyber-accent">[BOOLEAN TRUE]: Server returned status 200 OK! Flag: <b>FLAG{sqli_blind_boolean_extraction_912}</b></span>`;
+            } else { res.innerText = "[BOOLEAN FALSE]: Server returned status 404 Not Found."; }
+        }
+
+        function runXssBasic() {
+            const input = document.getElementById('w_xss_b').value;
+            const res = document.getElementById('res_xss_b');
+            res.innerHTML = `Sandbox Render: ${input}`;
+            if (input.toLowerCase().includes('\x3Cscript') || input.toLowerCase().includes('alert')) {
+                res.innerHTML += `<div class="mt-1 text-cyber-accent">[XSS EXECUTED]: <b>FLAG{xss_alert_script_executed_404}</b></div>`;
+            }
+        }
+
+        function runXssEvent() {
+            const input = document.getElementById('w_xss_e').value;
+            const res = document.getElementById('res_xss_e');
+            res.innerHTML = `Sandbox Render: ${input}`;
+            if (input.toLowerCase().includes('onerror') || input.toLowerCase().includes('img')) {
+                res.innerHTML += `<div class="mt-1 text-cyber-accent">[XSS EXECUTED]: <b>FLAG{xss_onerror_event_triggered_505}</b></div>`;
+            }
+        }
+
+        function runXssAttr() {
+            const input = document.getElementById('w_xss_a').value;
+            const res = document.getElementById('res_xss_a');
+            res.innerHTML = `<a href="${input}" class="text-cyber-cyan underline">Click Sample Link</a>`;
+            if (input.toLowerCase().includes('javascript:')) {
+                res.innerHTML += `<div class="mt-1 text-cyber-accent">[DOM XSS TRIGGERED]: <b>FLAG{dom_xss_href_attribute_leak_606}</b></div>`;
+            }
+        }
+
+        function runRobots() {
+            document.getElementById('res_robots').innerText = `User-agent: *\nDisallow: /admin-portal/\nDisallow: /backups/\n\n# SECRET DIRECTORY LEAK:\n# FLAG{robots_txt_admin_dir_leak_88}`;
+        }
+
+        function runEnv() {
+            document.getElementById('res_env').innerText = `DB_HOST=localhost\nDB_USER=root\nDB_PASS=SuperSecretPassword123!\nCTF_FLAG=FLAG{exposed_env_secret_db_pass_112}`;
+        }
+
+        function runApiScan() {
+            document.getElementById('res_api_scan').innerText = `// Found internal JavaScript route bundle:\nfetch('/api/v1/internal/flag') -> Returns: FLAG{api_endpoint_recon_discovered_789}`;
+        }
+
+        function runCmdBasic() {
+            const val = document.getElementById('w_cmd_b').value;
+            const res = document.getElementById('res_cmd_b');
+            if (val.includes(';') || val.includes('cat')) {
+                res.innerHTML = `PING 127.0.0.1 (127.0.0.1) 56(84) bytes of data.\n<span class="text-cyber-accent">cat flag.txt -> FLAG{cmd_injection_semicolon_cat_202}</span>`;
+            } else { res.innerText = "PING 127.0.0.1: 64 bytes from 127.0.0.1: icmp_seq=1 ttl=64 time=0.03 ms"; }
+        }
+
+        function runCmdPipe() {
+            const val = document.getElementById('w_cmd_p').value;
+            const res = document.getElementById('res_cmd_p');
+            if (val.includes('|')) {
+                res.innerHTML = `<span class="text-cyber-accent">Piped execution output -> FLAG{cmd_injection_pipe_ls_leak_303}</span>`;
+            } else { res.innerText = "Error: Invalid pipe input syntax."; }
+        }
+
+        function runCmdIfs() {
+            const val = document.getElementById('w_cmd_i').value;
+            const res = document.getElementById('res_cmd_i');
+            if (val.includes('$IFS')) {
+                res.innerHTML = `<span class="text-cyber-accent">Cat execution with $IFS space replacement -> FLAG{cmd_injection_space_bypass_ifs_808}</span>`;
+            } else { res.innerText = "Error: Input contain spaces which were filtered by firewall rule."; }
+        }
+
+        function runLfiBasic() {
+            const val = document.getElementById('w_lfi_b').value;
+            const res = document.getElementById('res_lfi_b');
+            if (val.includes('../../')) {
+                res.innerText = `root:x:0:0:root:/root:/bin/bash\nctf_flag:FLAG{lfi_path_traversal_passwd_101}`;
+            } else { res.innerText = "Error: File path restricted to /var/www/html/"; }
+        }
+
+        function runLfiNested() {
+            const val = document.getElementById('w_lfi_n').value;
+            const res = document.getElementById('res_lfi_n');
+            if (val.includes('....//')) {
+                res.innerText = `[Filter Bypass Success]: FLAG{lfi_nested_filter_bypass_404}`;
+            } else { res.innerText = "Access Denied: Traversal sequence stripped."; }
+        }
+
+        function runLfiEncoded() {
+            const val = document.getElementById('w_lfi_e').value;
+            const res = document.getElementById('res_lfi_e');
+            if (val.includes('%2e%2e%2f')) {
+                res.innerText = `[URL Decoding Success]: FLAG{lfi_url_encoded_bypass_707}`;
+            } else { res.innerText = "Error: Plaintext traversal blocked by WAF."; }
+        }
+
+        let cookieIsAdmin = false;
+        function toggleCookieRole() {
+            cookieIsAdmin = !cookieIsAdmin;
+            document.getElementById('cookie_val').innerText = cookieIsAdmin ? 'role=admin' : 'role=guest';
+            document.getElementById('res_cookie').innerHTML = cookieIsAdmin ? 
+                `<span class="text-cyber-accent">[ADMIN SESSION]: FLAG{cookie_tamper_admin_privilege_555}</span>` : 
+                `Guest Session Active.`;
+        }
+
+        let jwtIsAdmin = false;
+        function toggleJwtAdmin() {
+            jwtIsAdmin = !jwtIsAdmin;
+            document.getElementById('jwt_claim').innerText = `"admin": ${jwtIsAdmin}`;
+            document.getElementById('jwt_claim').className = jwtIsAdmin ? 'text-cyber-accent font-bold' : 'text-rose-400';
+            document.getElementById('res_jwt').innerHTML = jwtIsAdmin ? 
+                `<span class="text-cyber-accent">[JWT VERIFIED]: FLAG{jwt_alg_none_token_bypass_888}</span>` : 
+                `Header: {"alg":"none"}\nPayload: {"user":"guest", "admin":false}`;
+        }
+
+        function runSessPredict() {
+            const val = document.getElementById('w_sess_p').value;
+            const res = document.getElementById('res_sess_p');
+            if (val === 'sess_001' || val === 'sess_000') {
+                res.innerHTML = `<span class="text-cyber-accent">[HIJACK SUCCESS]: Authenticated as Administrator! Flag: <b>FLAG{session_prediction_admin_takeover_999}</b></span>`;
+            } else { res.innerText = `Session ${val} is an active Guest account.`; }
+        }
+
+        function runIdorUrl() {
+            const val = document.getElementById('w_idor_u').value;
+            const res = document.getElementById('res_idor_u');
+            if (val === '1') {
+                res.innerHTML = `<span class="text-cyber-accent">HTTP 200 OK: User Profile ID #1 (Admin). Secret Flag: <b>FLAG{idor_url_parameter_exposed_123}</b></span>`;
+            } else { res.innerText = `HTTP 200 OK: User Profile ID #${val} (Standard User).`; }
+        }
+
+        function runIdorJson() {
+            const val = document.getElementById('w_idor_j').value;
+            const res = document.getElementById('res_idor_j');
+            if (val.includes('"account_id": 1') || val.includes('"account_id":1')) {
+                res.innerHTML = `<span class="text-cyber-accent">{"status": "success", "flag": "FLAG{idor_json_api_payload_bypass_456}"}</span>`;
+            } else { res.innerText = `{"status": "success", "msg": "Standard user profile data fetched."}`; }
+        }
+
+        function runIdorHpp() {
+            const val = document.getElementById('w_idor_h').value;
+            const res = document.getElementById('res_idor_h');
+            if (val.includes('&id=1')) {
+                res.innerHTML = `<span class="text-cyber-accent">[HPP OVERRIDE]: Server selected last parameter id=1 -> FLAG{idor_parameter_pollution_master_789}</span>`;
+            } else { res.innerText = `Server parsed first parameter id=102.`; }
+        }
+
+        function runUplBasic() {
+            const val = document.getElementById('w_upl_b').value;
+            const res = document.getElementById('res_upl_b');
+            if (val.endsWith('.php')) {
+                res.innerHTML = `<span class="text-cyber-accent">[FILE EXECUTED]: shell.php uploaded! Flag: <b>FLAG{file_upload_unrestricted_php_111}</b></span>`;
+            } else { res.innerText = "Upload failed: Only .php files execute code."; }
+        }
+
+        function runUplDouble() {
+            const val = document.getElementById('w_upl_d').value;
+            const res = document.getElementById('res_upl_d');
+            if (val.includes('.php.')) {
+                res.innerHTML = `<span class="text-cyber-accent">[DOUBLE EXTENSION BYPASS]: shell.php.jpg parsed as PHP script! Flag: <b>FLAG{file_upload_double_extension_222}</b></span>`;
+            } else { res.innerText = "Upload rejected by static extension filter."; }
+        }
+
+        function runUplMime() {
+            const file = document.getElementById('w_upl_m_file').value;
+            const type = document.getElementById('w_upl_m_type').value;
+            const res = document.getElementById('res_upl_m');
+            if (file.endsWith('.php') && type === 'image/png') {
+                res.innerHTML = `<span class="text-cyber-accent">[MIME SPOOF SUCCESS]: Content-Type image/png accepted for ${file}! Flag: <b>FLAG{file_upload_mime_type_spoof_333}</b></span>`;
+            } else { res.innerText = "Upload blocked: Content-Type header mismatch."; }
+        }
+
+        function checkMcqAnswer(mcqId, selectedIdx, correctIdx) {
+            const explainBox = document.getElementById(`mcq_explain_${mcqId}`);
+            if (explainBox) explainBox.classList.remove('hidden');
+
+            if (selectedIdx === correctIdx) {
+                if (!userState.completedMcqs.includes(mcqId)) {
+                    userState.completedMcqs.push(mcqId);
+                    saveProgress();
+                    showToast("Correct Answer! +25 PTS", "success");
+                    loadTopic(userState.activeTopicId);
+                } else {
+                    showToast("Correct! (Already answered)", "info");
+                }
+            } else {
+                showToast("Incorrect answer. Try again!", "error");
+            }
+        }
+
+        function handleFlagSubmit(e, ctfId, correctFlag, pts) {
+            e.preventDefault();
+            const input = document.getElementById(`flagInput_${ctfId}`).value.trim();
+
+            if (!input) {
+                showToast("Please enter a flag token.", "warning");
+                return;
+            }
+
+            if (input === correctFlag) {
+                if (!userState.solvedFlags.includes(ctfId)) {
+                    userState.solvedFlags.push(ctfId);
+                    saveProgress();
+                    showToast(`CONGRATS! Correct Flag (+${pts} PTS)`, "success");
+                    loadTopic(userState.activeTopicId);
+                } else {
+                    showToast("Flag verified! (Already solved)", "info");
+                }
+            } else {
+                showToast("Incorrect flag token! Double-check and try again.", "error");
+            }
+        }
+
+        function toggleHint(ctfId) {
+            const box = document.getElementById(`hintBox_${ctfId}`);
+            const btnText = document.getElementById(`hintBtnText_${ctfId}`);
+            if (box.classList.contains('hidden')) {
+                box.classList.remove('hidden');
+                btnText.innerText = "Hide Hint";
+            } else {
+                box.classList.add('hidden');
+                btnText.innerText = "Show Hint";
+            }
+        }
+
+        function showToast(message, type = "info") {
+            const toast = document.getElementById('toastNotification');
+            const icon = document.getElementById('toastIcon');
+            const msg = document.getElementById('toastMsg');
+
+            toast.classList.remove('hidden', 'bg-emerald-950', 'border-emerald-500', 'text-emerald-300', 'bg-rose-950', 'border-rose-500', 'text-rose-300', 'bg-amber-950', 'border-amber-500', 'text-amber-300');
+
+            if (type === 'success') {
+                toast.classList.add('bg-emerald-950', 'border', 'border-emerald-500', 'text-emerald-300');
+                icon.className = 'fa-solid fa-circle-check text-emerald-400';
+            } else if (type === 'error') {
+                toast.classList.add('bg-rose-950', 'border', 'border-rose-500', 'text-rose-300');
+                icon.className = 'fa-solid fa-triangle-exclamation text-rose-400';
+            } else {
+                toast.classList.add('bg-amber-950', 'border', 'border-amber-500', 'text-amber-300');
+                icon.className = 'fa-solid fa-circle-info text-amber-400';
+            }
+
+            msg.innerText = message;
+            toast.classList.remove('hidden');
+
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 3000);
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            loadSavedProgress();
+            renderSidebar();
+            loadTopic(userState.activeTopicId);
+        });
+    </script>
+</body>
+</html>
